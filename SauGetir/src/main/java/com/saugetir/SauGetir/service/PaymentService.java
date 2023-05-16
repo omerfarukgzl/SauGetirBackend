@@ -1,46 +1,78 @@
 package com.saugetir.SauGetir.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saugetir.SauGetir.request.EncryptedPaymentRequest;
 import com.saugetir.SauGetir.response.PaymentResponse;
 import com.saugetir.SauGetir.respository.PaymentRepository;
+import com.saugetir.SauGetir.utils.EncryptionUtil;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Base64Utils;
 import org.springframework.web.client.RestTemplate;
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
-
-import static com.saugetir.SauGetir.utils.Constant.SECRET_KEY;
 
 @Service
 public class PaymentService {
     private final PaymentRepository paymentRepository;
+    private final EncryptionUtil encryptionUtil;
+    private final ObjectMapper objectMapper;
 
 
-    public PaymentService(PaymentRepository paymentRepository) {
+    public PaymentService(PaymentRepository paymentRepository, EncryptionUtil encryptionUtil, ObjectMapper objectMapper) {
         this.paymentRepository = paymentRepository;
+        this.encryptionUtil = encryptionUtil;
+        this.objectMapper = objectMapper;
     }
     public String payment(){
         return "token_id";
     }
 
-    public PaymentResponse payment2(EncryptedPaymentRequest encryptedPaymentRequest){
+    public PaymentResponse payment(EncryptedPaymentRequest encryptedPaymentRequest, String signature, String randomKey){
+
+        try {
+            String json = objectMapper.writeValueAsString(encryptedPaymentRequest); // Convert body to json
+            Boolean isSignatureValid = encryptionUtil.checkSignature(signature,randomKey,json); // Verify signature
+            if(!isSignatureValid){
+                throw new RuntimeException("Signature is not valid");
+            }
+            String decryptedData = encryptionUtil.decrypt(encryptedPaymentRequest.getData()); // When signature is valid, decrypt data
 
 
-        PaymentResponse paymentResponse = new PaymentResponse();
+            PaymentResponse paymentResponse = new PaymentResponse();
+            System.out.println("paymentRequest: " + decryptedData );
 
-        // Log
-        System.out.println("paymentRequest: " + encryptedPaymentRequest.getData() );
+            paymentResponse.setToken("Ben Ömer");
 
-        String decryptedData = decrypt(encryptedPaymentRequest.getData());
+            RestTemplate restTemplate = new RestTemplate();
+            String response = restTemplate.getForObject("http://localhost:8888/v1/saupay/generatePaymentToken/"+json, String.class);
+            paymentResponse.setToken(response);
+            return paymentResponse;
 
-        System.out.println("decryptedData: " + decryptedData );
-        paymentResponse.setToken("Ben Ömer");
 
-        RestTemplate restTemplate = new RestTemplate();
-       // String response = restTemplate.getForObject("http://localhost:8888/v1/saupay/generatePaymentToken/request", String.class);
-        return paymentResponse;
 
-        // TODO request sign edilecek
+
+
+
+
+
+
+
+        }catch (Exception e) {
+            throw new RuntimeException("Signature is not valid");
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -71,19 +103,7 @@ public class PaymentService {
     }
 
 
-    public String decrypt(String encryptedData){
-        try {
-            SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(), "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(Cipher.DECRYPT_MODE, secretKey);
-            byte[] encryptedBytes = Base64Utils.decodeFromString(encryptedData);
-            byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
-            return new String(decryptedBytes);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Şifre çözme hatası";
-        }
-    }
+
 }
 
 

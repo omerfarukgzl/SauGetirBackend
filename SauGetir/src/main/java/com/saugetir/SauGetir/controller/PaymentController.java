@@ -1,10 +1,12 @@
 package com.saugetir.SauGetir.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saugetir.SauGetir.request.EncryptedPaymentRequest;
-import com.saugetir.SauGetir.request.PaymentRequest;
 import com.saugetir.SauGetir.response.PaymentResponse;
 import com.saugetir.SauGetir.service.PaymentService;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
 
 @RestController()
 @RequestMapping("/v1/saugetir")
@@ -20,9 +22,26 @@ public class PaymentController {
         return paymentService.payment();
     }
 
-    @PostMapping("/payment2")
-    public PaymentResponse payment2(@RequestBody EncryptedPaymentRequest encryptedPaymentRequest){
-        return paymentService.payment2(encryptedPaymentRequest);
+    @PostMapping("/payment")
+    public PaymentResponse payment(HttpServletRequest request,@RequestBody EncryptedPaymentRequest encryptedPaymentRequest){
+
+        String signature = request.getHeader("x-signature");
+        String randomKey = request.getHeader("x-rnd-key");
+
+   /*     try {
+            String json = objectMapper.writeValueAsString(encryptedPaymentRequest);
+            String decryptedData =paymentService.decrypt(encryptedPaymentRequest.getData());
+            Boolean isSignatureValid = paymentService.checkSignature(signature,randomKey,json);
+            if(!isSignatureValid){
+                throw new RuntimeException("Signature is not valid");
+            }
+            return paymentService.payment(decryptedData);
+        }catch (Exception e) {
+            throw new RuntimeException("Signature is not valid");
+        }*/
+
+        return paymentService.payment(encryptedPaymentRequest,signature,randomKey);
+
     }
 
 
