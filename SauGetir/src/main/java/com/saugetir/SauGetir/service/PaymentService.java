@@ -1,24 +1,26 @@
 package com.saugetir.SauGetir.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saugetir.SauGetir.request.EncryptedPaymentRequest;
 import com.saugetir.SauGetir.response.PaymentResponse;
 import com.saugetir.SauGetir.respository.PaymentRepository;
+import com.saugetir.SauGetir.utils.AndroidBackendCommuication;
+import com.saugetir.SauGetir.utils.BackendBackendCommunication;
 import com.saugetir.SauGetir.utils.EncryptionUtil;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 @Service
 public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final EncryptionUtil encryptionUtil;
-    private final ObjectMapper objectMapper;
+    private final AndroidBackendCommuication androidBackendCommuication;
+    private final BackendBackendCommunication backendBackendCommunication;
 
 
-    public PaymentService(PaymentRepository paymentRepository, EncryptionUtil encryptionUtil, ObjectMapper objectMapper) {
+    public PaymentService(PaymentRepository paymentRepository, EncryptionUtil encryptionUtil, AndroidBackendCommuication androidBackendCommuication, BackendBackendCommunication backendBackendCommunication) {
         this.paymentRepository = paymentRepository;
         this.encryptionUtil = encryptionUtil;
-        this.objectMapper = objectMapper;
+        this.androidBackendCommuication = androidBackendCommuication;
+        this.backendBackendCommunication = backendBackendCommunication;
     }
     public String payment(){
         return "token_id";
@@ -26,80 +28,25 @@ public class PaymentService {
 
     public PaymentResponse payment(EncryptedPaymentRequest encryptedPaymentRequest, String signature, String randomKey){
 
-        try {
-            String json = objectMapper.writeValueAsString(encryptedPaymentRequest); // Convert body to json
-            Boolean isSignatureValid = encryptionUtil.checkSignature(signature,randomKey,json); // Verify signature
-            if(!isSignatureValid){
-                throw new RuntimeException("Signature is not valid");
-            }
-            String decryptedData = encryptionUtil.decrypt(encryptedPaymentRequest.getData()); // When signature is valid, decrypt data
+        // Gelen body'i json'a çevir-->Body imzası validmi kontrol et --> valid ise body'i decrypt et -->
+        // decrypt edilen body'i tekrar şifrele --> şifrelenen body'i EncryptedPaymentRequest objesine set et --> EncryptedPaymentRequest objesini HttpEntity objesine set et (Body) --> HttpEntity objesini RestTemplate ile Saupay'e gönder
+        // --> Saupay'den gelen response'u al --> response'u PaymentResponse objesine set et --> PaymentResponse objesini return et
 
 
-            PaymentResponse paymentResponse = new PaymentResponse();
-            System.out.println("paymentRequest: " + decryptedData );
+        /****   Android-Backend   ****/
 
-            paymentResponse.setToken("Ben Ömer");
+        String decryptedData = androidBackendCommuication.GetAndroidToBackendEncryptedAndSignatureDataTransaction(encryptedPaymentRequest, signature, randomKey);
 
-            RestTemplate restTemplate = new RestTemplate();
-            String response = restTemplate.getForObject("http://localhost:8888/v1/saupay/generatePaymentToken/"+json, String.class);
-            paymentResponse.setToken(response);
-            return paymentResponse;
+        /****   Backend-Backend   ****/
+        PaymentResponse paymentResponse = new PaymentResponse();
+        String rndmKey = encryptionUtil.generateRandomKey();
+        String encryptedAndSignatureTokenResponse = backendBackendCommunication.SendBackendToBackendEncryptedAndSignatureDataTransaction(decryptedData,rndmKey);
 
+        String decryptedTokenResponse = backendBackendCommunication.GetBackendToBackendSignatureDataTransaction(encryptedAndSignatureTokenResponse);
 
+        paymentResponse.setToken(decryptedTokenResponse);
+        return paymentResponse;
 
-
-
-
-
-
-
-
-        }catch (Exception e) {
-            throw new RuntimeException("Signature is not valid");
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // TODO sign edilen request Saupay'e gönderilecek
-
-
-
-
-
-
-
-        // TODO Saupay'den dönen sign token çözülüp doğrulanacak
-
-
-
-
-
-
-
-
-        // TODO doğrulanan token androide response olarak gönderilecek
-
-
-
-
-
-        //return paymentRequest.getMerchantCode()+" "+paymentRequest.getAmount();
     }
 
 
@@ -108,3 +55,18 @@ public class PaymentService {
 
 
 
+
+/* try {
+            String json = objectMapper.writeValueAsString(encryptedPaymentRequest); // Convert body to json
+            System.out.println("Encrypted Request -Mobile: " + json );
+            Boolean isSignatureValid = encryptionUtil.checkSignature(signature,randomKey,json,SECRET_KEY_CLIENT); // Verify signature
+            System.out.println("Signature is Valid-Mobile: " + isSignatureValid );
+            if(!isSignatureValid){
+                throw new RuntimeException("Signature is not valid-Mobile");
+            }
+            String decryptedData = encryptionUtil.decrypt(encryptedPaymentRequest.getData(),SECRET_KEY_CLIENT); // When signature is valid, decrypt data
+            System.out.println("Decrypted Request-Mobile: " + decryptedData );
+
+        }catch (Exception e) {
+            throw new RuntimeException("Beklenmedik bir hata oluştu.");
+        }*/

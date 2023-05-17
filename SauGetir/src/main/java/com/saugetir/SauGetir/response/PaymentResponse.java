@@ -7,8 +7,10 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class PaymentResponse {
-    private String token ;
+    private String token;
+
 }
+

@@ -24,22 +24,8 @@ public class PaymentController {
 
     @PostMapping("/payment")
     public PaymentResponse payment(HttpServletRequest request,@RequestBody EncryptedPaymentRequest encryptedPaymentRequest){
-
         String signature = request.getHeader("x-signature");
         String randomKey = request.getHeader("x-rnd-key");
-
-   /*     try {
-            String json = objectMapper.writeValueAsString(encryptedPaymentRequest);
-            String decryptedData =paymentService.decrypt(encryptedPaymentRequest.getData());
-            Boolean isSignatureValid = paymentService.checkSignature(signature,randomKey,json);
-            if(!isSignatureValid){
-                throw new RuntimeException("Signature is not valid");
-            }
-            return paymentService.payment(decryptedData);
-        }catch (Exception e) {
-            throw new RuntimeException("Signature is not valid");
-        }*/
-
         return paymentService.payment(encryptedPaymentRequest,signature,randomKey);
 
     }
