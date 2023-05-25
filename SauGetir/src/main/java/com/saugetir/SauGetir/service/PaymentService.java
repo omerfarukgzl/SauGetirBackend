@@ -29,8 +29,8 @@ public class PaymentService {
     public PaymentResponse payment(EncryptedPaymentRequest encryptedPaymentRequest, String signature, String randomKey){
 
         // Gelen body'i json'a çevir-->Body imzası validmi kontrol et --> valid ise body'i decrypt et -->
-        // decrypt edilen body'i tekrar şifrele --> şifrelenen body'i EncryptedPaymentRequest objesine set et --> EncryptedPaymentRequest objesini HttpEntity objesine set et (Body) --> HttpEntity objesini RestTemplate ile Saupay'e gönder
-        // --> Saupay'den gelen response'u al --> response'u PaymentResponse objesine set et --> PaymentResponse objesini return et
+        // decrypt edilen body'i tekrar şifrele --> şifrlenen body i imzala --> imzalı header ve şifreli body Suapay'e gönder
+        // --> Saupay'den gelen şifrelenmiş tokenı al --> tokenı decrypt et --> decrypt edilen tokenı PaymentResponse objesine set et --> PaymentResponse objesini return et
 
 
         /****   Android-Backend   ****/
@@ -41,7 +41,6 @@ public class PaymentService {
         PaymentResponse paymentResponse = new PaymentResponse();
         String rndmKey = encryptionUtil.generateRandomKey();
         String encryptedAndSignatureTokenResponse = backendBackendCommunication.SendBackendToBackendEncryptedAndSignatureDataTransaction(decryptedData,rndmKey);
-
         String decryptedTokenResponse = backendBackendCommunication.GetBackendToBackendSignatureDataTransaction(encryptedAndSignatureTokenResponse);
 
         paymentResponse.setToken(decryptedTokenResponse);
